@@ -7,6 +7,15 @@
 
 <h2> 📝 Instrucciones </h2>
 <br>
+
+<p> El servidor requiere de autorización JWT para funcionar, para esto se debe hacer un archivo .env con las siguientes variables </p>
+
+```
+SECRET_KEY="" // clave secreta
+AUTHORIZED_TOKEN_GENERATION="" // clave alfanumérica para generar el token, se debe hacer un POST a localhost:3000/api/generartoken enviando auth_token en un body
+MAX_TIME_TOKEN="" // tiempo máximo que dura el token generado anteriormente
+```
+
 <p> Para ejecutar el servidor de express (index.js:)  </p>
 
 ```
@@ -43,7 +52,7 @@ localhost:3000/api/estadored
 
 ```
 {
-    "respuestaBip": true,
+    "respuesta": true,
     "estadoRedMetro": {
         "L1": "Línea operativa",
         "L2": "Línea operativa",
