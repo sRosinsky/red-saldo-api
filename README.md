@@ -66,7 +66,7 @@ localhost:3000/api/estadored
 }
 ```
 
-<p> Si hay errores, el estado de respuestaBip cambiará a false, y aparecerá la key "error" con la descripción del error:  </p>
+<p> Si hay errores, el estado de <<respuesta>> cambiará a false, y aparecerá la key "error" con la descripción del error:  </p>
 
 <strong>Ejemplo:</strong>
 <br />
