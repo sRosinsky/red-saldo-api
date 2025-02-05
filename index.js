@@ -1,19 +1,29 @@
+
 const express = require("express");
 const env = require('dotenv').config()
 const tarjetaBip = require("./lib/tarjetabip/tarjetaBip");
 const estadoRed = require("./lib/tarjetabip/estadoRed");
 const tarjetaBioTren = require("./lib/biotren/tarjetaBioTren");
+const paseEscolar = require("./lib/tne/paseEscolar.js");
 const bodyparser = require('body-parser');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
 
 let api = express();
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Promesa rechazada, error no controlado:', promise, 'razón: \n', reason);
+});
+
+process.on('unhandledException', (reason, promise) => {
+  console.error('Excepción no controlada: \n', promise, 'razón: \n', reason);
+});
+
 api.use(bodyparser.json());
 
 const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.SECRET_KEY;
 const AUTH_TOKEN = process.env.AUTHORIZED_TOKEN_GENERATION;
 const TIME = process.env.MAX_TIME_TOKEN;
-
 
 api.set("port", PORT)
 
@@ -23,9 +33,7 @@ const responseAuth = {
 
 api.post("/api/generartoken", (req, res) => {
   const { auth_token } = req.body;
-  ß
   if (!auth_token || auth_token !== AUTH_TOKEN ) {
-    
     return (res.status(403)).json(responseAuth);
   }
 
@@ -76,22 +84,27 @@ api.get("/api/bip/estadored", verificarToken, (req,res) => {
 });
 
 api.get("/api/biotren/:numerotarjeta", verificarToken, async (req,res) => {
-  let jsonData = {}
   const numtarjeta = req.params.numerotarjeta;
-  const data = await tarjetaBioTren(numtarjeta)
+  
+  jsonData = {}
 
   try {
-    jsonData.respuesta = true, jsonData.saldo = data[0], jsonData.movimientos = data[1]
-    res.send(jsonData)
-  } catch (error) {
-    jsonData.respuesta = false, jsonData.mensaje = error
-    res.send(jsonData)
+    if (numtarjeta.length >= 7 && numtarjeta.length <= 10) {
+      const data = await tarjetaBioTren(numtarjeta)
+      res.send(data)
+    } else {
+      jsonData.respuesta = false, jsonData.mensaje = "La tarjeta ingresada no es válida."
+      res.send(jsonData)
+    }
+  } catch (e) {
+    jsonData.respuesta = false, jsonData.mensaje = e
   }
 })
 
 api.get("/api/bip/:numerotarjeta", verificarToken, (req, res) => {
   let jsonData = {};
   numtarjeta = req.params.numerotarjeta;
+
   tarjetaBip(numtarjeta)
     .then((data) => {
       jsonData = {
@@ -106,27 +119,36 @@ api.get("/api/bip/:numerotarjeta", verificarToken, (req, res) => {
 
       res.json(jsonData);
     })
-    .catch((error) => {
+    .catch((e) => {
       jsonData = {
-        respuesta: false,
-        error,
+        "respuesta": false,
+        "mensaje": e
       }
       res.json(jsonData)
     });
 });
 
+api.get("/api/paseescolar/:numtarjeta", verificarToken, (req,res) => {
+  paseEscolar(req.params.numtarjeta)
+  .then((data) => {
+    res.json({
+      "respuesta": true,
+      "saldo": data
+    })
+  })
+  .catch((e) => {
+    res.json({
+      "respuesta": false,
+      "mensaje": e
+    })
+  })
+})
+api.all(["/api/bip/estadored", "/api/bip/:numerotarjeta", "/api/generartoken", "/api/bip/", "/api/bip/", "/api/biotren/:numerotarjeta"], verificarToken, (req,res) => {
+  res.json({respuesta: "Método no permitido."});
+})
 
-api.all("/api/bip/", (req, res) => {
-  res.redirect("/")
-});
-
-
-api.all("/api/", (req, res) => {
-  res.redirect("/");
-});
-
-api.all("*", (req,res) => {
-  res.json({respuesta: "Página no encontrada."})
+api.all("*", verificarToken, (req,res) => {
+  res.json({respuesta: "Página no encontrada."});
 })
 
 api.listen(api.get("port"), () => {
