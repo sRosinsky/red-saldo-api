@@ -1,4 +1,6 @@
-
+/*
+@author: sRosinsky
+*/
 const express = require("express");
 const env = require('dotenv').config()
 const tarjetaBip = require("./lib/tarjetabip/tarjetaBip");
@@ -7,6 +9,8 @@ const tarjetaBioTren = require("./lib/biotren/tarjetaBioTren");
 const paseEscolar = require("./lib/tne/paseEscolar.js");
 const bodyparser = require('body-parser');
 const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const cors = require('cors');
 
 let api = express();
 
@@ -19,6 +23,34 @@ process.on('unhandledException', (reason, promise) => {
 });
 
 api.use(bodyparser.json());
+api.use(helmet());
+
+//helmet 
+api.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"], 
+      styleSrc: ["'self'"],
+      objectSrc: ["'none'"],  
+      upgradeInsecureRequests: []
+    }
+  })
+);
+
+//cors
+const allowed_ips = ["::1"]
+api.use((req,res,next) => {
+  if (allowed_ips.includes(req.ip)) {
+    next()
+  } else {
+    res.send("Acceso denegado")
+  }
+}
+)
+
+
+api.use(helmet.dnsPrefetchControl({ allow: false }));
 
 const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -26,10 +58,6 @@ const AUTH_TOKEN = process.env.AUTHORIZED_TOKEN_GENERATION;
 const TIME = process.env.MAX_TIME_TOKEN;
 
 api.set("port", PORT)
-
-const responseAuth = {
-  respuesta: "No autorizado."
-}
 
 api.post("/api/generartoken", (req, res) => {
   const { auth_token } = req.body;
@@ -42,9 +70,11 @@ api.post("/api/generartoken", (req, res) => {
 })
 
 const verificarToken = (req,res,next) => {
+
   const token = req.headers['authorization'];
   if (!token) {
-    return (res.status(403)).json(responseAuth);
+    return (res.send(("Acceso denegado")).status(403));
+
   }
   try {
     const decoded = jwt.verify(token, SECRET_KEY)
@@ -52,7 +82,7 @@ const verificarToken = (req,res,next) => {
     next();
 
   } catch (error) {
-    return (res.status(403)).json(responseAuth);
+    return (res.send(("Acceso denegado")).status(403));
   }
 }
 
@@ -143,12 +173,19 @@ api.get("/api/paseescolar/:numtarjeta", verificarToken, (req,res) => {
     })
   })
 })
-api.all(["/api/bip/estadored", "/api/bip/:numerotarjeta", "/api/generartoken", "/api/bip/", "/api/bip/", "/api/biotren/:numerotarjeta"], verificarToken, (req,res) => {
-  res.json({respuesta: "Método no permitido."});
+
+api.all([
+"/api/bip/estadored", 
+"/api/bip/:numerotarjeta", 
+"/api/generartoken", 
+"/api/bip/", 
+"/api/bip/", 
+"/api/biotren/:numerotarjeta"], verificarToken, (req,res) => {
+  res.send(("Método no permitido")).status(405)
 })
 
 api.all("*", verificarToken, (req,res) => {
-  res.json({respuesta: "Página no encontrada."});
+  res.send(("Página no encontrada")).status(404)
 })
 
 api.listen(api.get("port"), () => {
