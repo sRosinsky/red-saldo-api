@@ -1,5 +1,4 @@
-# red-saldo-API
-<h4> Microservicio creado con Node para obtener datos de la red metro en un formato amigable. (Chile) </h4>
+<h4> Microservicio creado con Node para obtener datos de varios servicios de transporte público en formato json (Chile) </h4>
 <br>
 
 <h2> 📝 Prerrequisitos </h2>
