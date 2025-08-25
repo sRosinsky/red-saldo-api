@@ -2,7 +2,6 @@
 @author: sRosinsky
 */
 const express = require("express");
-const env = require('dotenv').config()
 const tarjetaBip = require("./lib/tarjetabip/tarjetaBip");
 const estadoRed = require("./lib/tarjetabip/estadoRed");
 const tarjetaBioTren = require("./lib/biotren/tarjetaBioTren");
@@ -11,15 +10,17 @@ const bodyparser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const cors = require('cors');
+require('dotenv').config()
 
 let api = express();
+api.use(cors())
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Promesa rechazada, error no controlado:', promise, 'razón: \n', reason);
+  console.error('Promesa rechazada:', promise, '\nrazón: \n', reason);
 });
 
 process.on('unhandledException', (reason, promise) => {
-  console.error('Excepción no controlada: \n', promise, 'razón: \n', reason);
+  console.error('Excepción no controlada: \n', promise, '\nrazón: \n', reason);
 });
 
 api.use(bodyparser.json());
@@ -38,36 +39,23 @@ api.use(
   })
 );
 
-//cors
-const allowed_ips = ["::1"]
-api.use((req,res,next) => {
-  if (allowed_ips.includes(req.ip)) {
-    next()
-  } else {
-    res.send("Acceso denegado")
-  }
-}
-)
-
-
 api.use(helmet.dnsPrefetchControl({ allow: false }));
 
 const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.SECRET_KEY;
 const AUTH_TOKEN = process.env.AUTHORIZED_TOKEN_GENERATION;
 const TIME = process.env.MAX_TIME_TOKEN;
+const allowed_ips = ["::1", "::ffff:127.0.0.1"]
 
 api.set("port", PORT)
 
-api.post("/api/generartoken", (req, res) => {
-  const { auth_token } = req.body;
-  if (!auth_token || auth_token !== AUTH_TOKEN ) {
-    return (res.status(403)).json(responseAuth);
+api.use((req,res,next) => {
+  if (allowed_ips.includes(req.ip)) {
+    return next()
+  } else {
+    return (res.status(403)).json("Acceso denegado");
   }
-
-  const token = jwt.sign({auth_token}, SECRET_KEY, {expiresIn: TIME || "24h"})
-  res.json({token})
-})
+});
 
 const verificarToken = (req,res,next) => {
 
@@ -85,6 +73,18 @@ const verificarToken = (req,res,next) => {
     return (res.send(("Acceso denegado")).status(403));
   }
 }
+
+
+api.post("/api/generartoken", (req, res) => {
+  const { auth_token } = req.body;
+  if (!auth_token || auth_token !== AUTH_TOKEN ) {
+    return (res.status(403)).json("Acceso denegado");
+  }
+
+  const token = jwt.sign({auth_token}, SECRET_KEY, {expiresIn: TIME || "24h"})
+  res.json({token})
+});
+
 
 api.get("/api/bip/estadored", verificarToken, (req,res) => {
   estadoRed()
